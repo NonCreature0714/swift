@@ -2,15 +2,19 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
-// See http://swift.org/LICENSE.txt for license information
-// See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
 
+#if os(Linux)
+import Glibc
+#else
 import Darwin
+#endif
 
 struct BenchResults {
   var delim: String  = ","
@@ -96,7 +100,7 @@ struct TestConfig {
 
   /// After we run the tests, should the harness sleep to allow for utilities
   /// like leaks that require a PID to run on the test harness.
-  var afterRunSleep: Int? = nil
+  var afterRunSleep: Int?
 
   /// The list of tests to run.
   var tests = [Test]()
@@ -226,28 +230,61 @@ func stopTrackingObjects(_: UnsafeMutableRawPointer) -> Int
 
 #endif
 
-class SampleRunner {
+#if os(Linux)
+class Timer {
+  typealias TimeT = timespec
+  func getTime() -> TimeT {
+    var ticks = timespec(tv_sec: 0, tv_nsec: 0)
+    clock_gettime(CLOCK_REALTIME, &ticks)
+    return ticks
+  }
+  func diffTimeInNanoSeconds(from start_ticks: TimeT, to end_ticks: TimeT) -> UInt64 {
+    var elapsed_ticks = timespec(tv_sec: 0, tv_nsec: 0)
+    if end_ticks.tv_nsec - start_ticks.tv_nsec < 0 {
+      elapsed_ticks.tv_sec = end_ticks.tv_sec - start_ticks.tv_sec - 1
+      elapsed_ticks.tv_nsec = end_ticks.tv_nsec - start_ticks.tv_nsec + 1000000000
+    } else {
+      elapsed_ticks.tv_sec = end_ticks.tv_sec - start_ticks.tv_sec
+      elapsed_ticks.tv_nsec = end_ticks.tv_nsec - start_ticks.tv_nsec
+    }
+    return UInt64(elapsed_ticks.tv_sec) * UInt64(1000000000) + UInt64(elapsed_ticks.tv_nsec)
+  }
+}
+#else
+class Timer {
+  typealias TimeT = UInt64
   var info = mach_timebase_info_data_t(numer: 0, denom: 0)
   init() {
     mach_timebase_info(&info)
   }
+  func getTime() -> TimeT {
+    return mach_absolute_time()
+  }
+  func diffTimeInNanoSeconds(from start_ticks: TimeT, to end_ticks: TimeT) -> UInt64 {
+    let elapsed_ticks = end_ticks - start_ticks
+    return elapsed_ticks * UInt64(info.numer) / UInt64(info.denom)
+  }
+}
+#endif
+
+class SampleRunner {
+  let timer = Timer()
   func run(_ name: String, fn: (Int) -> Void, num_iters: UInt) -> UInt64 {
     // Start the timer.
 #if SWIFT_RUNTIME_ENABLE_LEAK_CHECKER
     var str = name
     startTrackingObjects(UnsafeMutableRawPointer(str._core.startASCII))
 #endif
-    let start_ticks = mach_absolute_time()
+    let start_ticks = timer.getTime()
     fn(Int(num_iters))
     // Stop the timer.
-    let end_ticks = mach_absolute_time()
+    let end_ticks = timer.getTime()
 #if SWIFT_RUNTIME_ENABLE_LEAK_CHECKER
     stopTrackingObjects(UnsafeMutableRawPointer(str._core.startASCII))
 #endif
 
     // Compute the spent time and the scaling factor.
-    let elapsed_ticks = end_ticks - start_ticks
-    return elapsed_ticks * UInt64(info.numer) / UInt64(info.denom)
+    return timer.diffTimeInNanoSeconds(from: start_ticks, to: end_ticks)
   }
 }
 
@@ -268,7 +305,14 @@ func runBench(_ name: String, _ fn: (Int) -> Void, _ c: TestConfig) -> BenchResu
     var elapsed_time : UInt64 = 0
     if c.fixedNumIters == 0 {
       elapsed_time = sampler.run(name, fn: fn, num_iters: 1)
-      scale = UInt(time_per_sample / elapsed_time)
+      if elapsed_time > 0 {
+        scale = UInt(time_per_sample / elapsed_time)
+      } else {
+        if c.verbose {
+          print("    Warning: elapsed time is 0. This can be safely ignored if the body is empty.")
+        }
+        scale = 1
+      }
     } else {
       // Compute the scaling factor if a fixed c.fixedNumIters is not specified.
       scale = c.fixedNumIters

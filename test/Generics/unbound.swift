@@ -1,4 +1,4 @@
-// RUN: %target-parse-verify-swift
+// RUN: %target-typecheck-verify-swift
 
 // Verify the use of unbound generic types. They are permitted in
 // certain places where type inference can fill in the generic
@@ -9,7 +9,7 @@
 // --------------------------------------------------
 
 struct Foo<T> { // expected-note{{generic type 'Foo' declared here}} expected-note{{generic type 'Foo' declared here}}
-  struct Wibble { } // expected-error{{cannot be nested in generic type}}
+  struct Wibble { }
 }
 
 class Dict<K, V> { } // expected-note{{generic type 'Dict' declared here}} expected-note{{generic type 'Dict' declared here}} expected-note{{generic type 'Dict' declared here}}
@@ -67,3 +67,8 @@ func callfoor20792596<T>(x: T) -> T {
   return foor20792596(x) // expected-error {{generic parameter 'T' could not be inferred}}
 }
 
+// <rdar://problem/31181895> parameter "not used in function signature" when part of a superclass constraint
+struct X1<T> {
+  func bar<U>() where T: X2<U> {}
+}
+class X2<T> {}

@@ -2,11 +2,11 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
-// See http://swift.org/LICENSE.txt for license information
-// See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -141,7 +141,6 @@ namespace sil_block {
     SIL_DEFAULT_WITNESS_TABLE,
     SIL_DEFAULT_WITNESS_TABLE_ENTRY,
     SIL_DEFAULT_WITNESS_TABLE_NO_ENTRY,
-    SIL_GENERIC_OUTER_PARAMS,
     SIL_INST_WITNESS_METHOD,
     SIL_SPECIALIZE_ATTR,
 
@@ -154,10 +153,9 @@ namespace sil_block {
       = decls_block::SPECIALIZED_PROTOCOL_CONFORMANCE,
     INHERITED_PROTOCOL_CONFORMANCE
       = decls_block::INHERITED_PROTOCOL_CONFORMANCE,
-    GENERIC_PARAM_LIST = decls_block::GENERIC_PARAM_LIST,
     GENERIC_PARAM = decls_block::GENERIC_PARAM,
     GENERIC_REQUIREMENT = decls_block::GENERIC_REQUIREMENT,
-    LAST_GENERIC_REQUIREMENT = decls_block::LAST_GENERIC_REQUIREMENT,
+    LAYOUT_REQUIREMENT = decls_block::LAYOUT_REQUIREMENT,
   };
 
   using SILInstNoOperandLayout = BCRecordLayout<
@@ -173,6 +171,7 @@ namespace sil_block {
   using VTableEntryLayout = BCRecordLayout<
     SIL_VTABLE_ENTRY,
     DeclIDField,  // SILFunction name
+    SILLinkageField,      // Linkage
     BCArray<ValueIDField> // SILDeclRef
   >;
 
@@ -182,7 +181,7 @@ namespace sil_block {
     BCFixed<1>,          // Is this a declaration. We represent this separately
                          // from whether or not we have entries since we can
                          // have empty witness tables.
-    BCFixed<1>           // IsFragile.
+    BCFixed<1>           // IsSerialized.
     // Conformance follows
     // Witness table entries will be serialized after.
   >;
@@ -201,7 +200,7 @@ namespace sil_block {
 
   using WitnessAssocProtocolLayout = BCRecordLayout<
     SIL_WITNESS_ASSOC_PROTOCOL,
-    DeclIDField, // ID of AssociatedTypeDecl
+    TypeIDField, // ID of associated type
     DeclIDField  // ID of ProtocolDecl
     // Trailed by the conformance itself if appropriate.
   >;
@@ -232,7 +231,7 @@ namespace sil_block {
   using SILGlobalVarLayout = BCRecordLayout<
     SIL_GLOBALVAR,
     SILLinkageField,
-    BCFixed<1>,          // fragile
+    BCFixed<1>,          // serialized
     BCFixed<1>,          // Is this a declaration.
     BCFixed<1>,          // Is this a let variable.
     TypeIDField,
@@ -241,15 +240,17 @@ namespace sil_block {
 
   using SILFunctionLayout =
       BCRecordLayout<SIL_FUNCTION, SILLinkageField,
-                     BCFixed<1>, // transparent
-                     BCFixed<1>, // fragile
-                     BCFixed<2>, // thunk/reabstraction_thunk
-                     BCFixed<1>, // global_init
-                     BCFixed<2>, // inlineStrategy
-                     BCFixed<2>, // side effect info.
-                     BCFixed<2>, // number of specialize attributes
-                     TypeIDField,// SILFunctionType
-                     DeclIDField,// ClangNode owner
+                     BCFixed<1>,  // transparent
+                     BCFixed<2>,  // serialized
+                     BCFixed<2>,  // thunk/reabstraction_thunk
+                     BCFixed<1>,  // global_init
+                     BCFixed<2>,  // inlineStrategy
+                     BCFixed<2>,  // side effect info.
+                     BCFixed<2>,  // number of specialize attributes
+                     BCFixed<1>,  // has qualified ownership
+                     TypeIDField, // SILFunctionType
+                     GenericEnvironmentIDField,
+                     DeclIDField, // ClangNode owner
                      BCArray<IdentifierIDField> // Semantics Attribute
                      // followed by specialize attributes
                      // followed by generic param list, if any
@@ -257,8 +258,8 @@ namespace sil_block {
 
   using SILSpecializeAttrLayout =
       BCRecordLayout<SIL_SPECIALIZE_ATTR,
-                     BCFixed<5> // number of substitutions
-                     // followed by bound generic substitutions
+                     BCFixed<1>, // exported
+                     BCFixed<1> // specialization kind
                      >;
 
   // Has an optional argument list where each argument is a typed valueref.
@@ -384,11 +385,6 @@ namespace sil_block {
     TypeIDField,          // Count operand
     ValueIDField,
     TypeIDField           // Result type
-  >;
-
-  using SILGenericOuterParamsLayout = BCRecordLayout<
-    SIL_GENERIC_OUTER_PARAMS,
-    DeclIDField // The decl id of the outer param if any.
   >;
 
   using SILInstWitnessMethodLayout = BCRecordLayout<

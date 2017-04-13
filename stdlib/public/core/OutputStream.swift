@@ -2,11 +2,11 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
-// See http://swift.org/LICENSE.txt for license information
-// See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
 
@@ -250,6 +250,7 @@ func _getEnumCaseName<T>(_ value: T) -> UnsafePointer<CChar>?
 func _opaqueSummary(_ metadata: Any.Type) -> UnsafePointer<CChar>?
 
 /// Do our best to print a value that cannot be printed directly.
+@_semantics("optimize.sil.specialize.generic.never")
 internal func _adHocPrint_unlocked<T, TargetStream : TextOutputStream>(
     _ value: T, _ mirror: Mirror, _ target: inout TargetStream,
     isDebugPrint: Bool
@@ -270,16 +271,24 @@ internal func _adHocPrint_unlocked<T, TargetStream : TextOutputStream>(
       case .tuple:
         target.write("(")
         var first = true
-        for (_, value) in mirror.children {
+        for (label, value) in mirror.children {
           if first {
             first = false
           } else {
             target.write(", ")
           }
+
+          if let label = label {
+            if !label.isEmpty && label[label.startIndex] != "." {
+              target.write(label)
+              target.write(": ")
+            }
+          }
+
           _debugPrint_unlocked(value, &target)
         }
         target.write(")")
-      case .`struct`:
+      case .struct:
         printTypeName(mirror.subjectType)
         target.write("(")
         var first = true
@@ -296,7 +305,7 @@ internal func _adHocPrint_unlocked<T, TargetStream : TextOutputStream>(
           }
         }
         target.write(")")
-      case .`enum`:
+      case .enum:
         if let cString = _getEnumCaseName(value),
             let caseName = String(validatingUTF8: cString) {
           // Write the qualified type name in debugPrint.
@@ -310,7 +319,7 @@ internal func _adHocPrint_unlocked<T, TargetStream : TextOutputStream>(
           printTypeName(mirror.subjectType)
         }
         if let (_, value) = mirror.children.first {
-          if (Mirror(reflecting: value).displayStyle == .tuple) {
+          if Mirror(reflecting: value).displayStyle == .tuple {
             _debugPrint_unlocked(value, &target)
           } else {
             target.write("(")
@@ -335,7 +344,9 @@ internal func _adHocPrint_unlocked<T, TargetStream : TextOutputStream>(
   }
 }
 
+@_versioned
 @inline(never)
+@_semantics("optimize.sil.specialize.generic.never")
 @_semantics("stdlib_binary_only")
 internal func _print_unlocked<T, TargetStream : TextOutputStream>(
   _ value: T, _ target: inout TargetStream
@@ -376,6 +387,8 @@ internal func _print_unlocked<T, TargetStream : TextOutputStream>(
 ///
 /// This function is forbidden from being inlined because when building the
 /// standard library inlining makes us drop the special semantics.
+@_inlineable
+@_versioned
 @inline(never) @effects(readonly)
 func _toStringReadOnlyStreamable<T : TextOutputStreamable>(_ x: T) -> String {
   var result = ""
@@ -383,6 +396,8 @@ func _toStringReadOnlyStreamable<T : TextOutputStreamable>(_ x: T) -> String {
   return result
 }
 
+@_inlineable
+@_versioned
 @inline(never) @effects(readonly)
 func _toStringReadOnlyPrintable<T : CustomStringConvertible>(_ x: T) -> String {
   return x.description
@@ -392,6 +407,7 @@ func _toStringReadOnlyPrintable<T : CustomStringConvertible>(_ x: T) -> String {
 // `debugPrint`
 //===----------------------------------------------------------------------===//
 
+@_semantics("optimize.sil.specialize.generic.never")
 @inline(never)
 public func _debugPrint_unlocked<T, TargetStream : TextOutputStream>(
     _ value: T, _ target: inout TargetStream
@@ -415,6 +431,7 @@ public func _debugPrint_unlocked<T, TargetStream : TextOutputStream>(
   _adHocPrint_unlocked(value, mirror, &target, isDebugPrint: true)
 }
 
+@_semantics("optimize.sil.specialize.generic.never")
 internal func _dumpPrint_unlocked<T, TargetStream : TextOutputStream>(
     _ value: T, _ mirror: Mirror, _ target: inout TargetStream
 ) {

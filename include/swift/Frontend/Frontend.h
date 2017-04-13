@@ -2,11 +2,11 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
-// See http://swift.org/LICENSE.txt for license information
-// See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
 //
@@ -133,11 +133,12 @@ public:
     return SearchPathOpts.ImportSearchPaths;
   }
 
-  void setFrameworkSearchPaths(const std::vector<std::string> &Paths) {
+  void setFrameworkSearchPaths(
+             const std::vector<SearchPathOptions::FrameworkSearchPath> &Paths) {
     SearchPathOpts.FrameworkSearchPaths = Paths;
   }
 
-  ArrayRef<std::string> getFrameworkSearchPaths() const {
+  ArrayRef<SearchPathOptions::FrameworkSearchPath> getFrameworkSearchPaths() const {
     return SearchPathOpts.FrameworkSearchPaths;
   }
 
@@ -263,6 +264,8 @@ public:
     assert(Buf);
     CodeCompletionBuffer = Buf;
     CodeCompletionOffset = Offset;
+    // We don't need typo-correction for code-completion.
+    LangOpts.DisableTypoCorrection = true;
   }
 
   std::pair<llvm::MemoryBuffer *, unsigned> getCodeCompletionPoint() const {
@@ -289,6 +292,11 @@ public:
   bool isDelayedFunctionBodyParsing() const {
     return FrontendOpts.DelayedFunctionBodyParsing;
   }
+
+  /// Retrieve a module hash string that is suitable for uniquely
+  /// identifying the conditions under which the module was built, for use
+  /// in generating a cached PCH file for the bridging header.
+  std::string getPCHHash() const;
 };
 
 /// A class which manages the state and execution of the compiler.
@@ -309,7 +317,7 @@ class CompilerInstance {
   DependencyTracker *DepTracker = nullptr;
   ReferencedNameTracker *NameTracker = nullptr;
 
-  Module *MainModule = nullptr;
+  ModuleDecl *MainModule = nullptr;
   SerializedModuleLoader *SML = nullptr;
 
   /// Contains buffer IDs for input source code files.
@@ -385,7 +393,7 @@ public:
     return static_cast<bool>(TheSILModule);
   }
 
-  Module *getMainModule();
+  ModuleDecl *getMainModule();
 
   SerializedModuleLoader *getSerializedModuleLoader() const { return SML; }
 

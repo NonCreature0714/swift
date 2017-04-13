@@ -2,11 +2,11 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
-// See http://swift.org/LICENSE.txt for license information
-// See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
 
@@ -71,7 +71,7 @@ namespace {
                             {}, SM, {});
     }
   };
-}
+} // end anonymous namespace
 
 ClangDiagnosticConsumer::ClangDiagnosticConsumer(
     ClangImporter::Implementation &impl,
@@ -112,7 +112,7 @@ SourceLoc ClangDiagnosticConsumer::resolveSourceLocation(
     std::unique_ptr<llvm::MemoryBuffer> mirrorBuffer{
       llvm::MemoryBuffer::getMemBuffer(buffer->getBuffer(),
                                        buffer->getBufferIdentifier(),
-                                       /*nullTerminated=*/true)
+                                       /*RequiresNullTerminator=*/true)
     };
     mirrorID = swiftSrcMgr.addNewSourceBuffer(std::move(mirrorBuffer));
     mirroredBuffers[buffer] = mirrorID;
@@ -173,6 +173,7 @@ void ClangDiagnosticConsumer::HandleDiagnostic(
                                   clangDiag.getLocation());
 
     ctx.Diags.diagnose(loc, diag::clang_cannot_build_module,
+                       ctx.LangOpts.EnableObjCInterop,
                        CurrentImport->getName());
     return;
   }

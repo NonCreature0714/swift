@@ -2,16 +2,19 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
-// See http://swift.org/LICENSE.txt for license information
-// See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
 //
 // Cleanup SIL to make it suitable for IRGen. Specifically, removes the calls to
 // Builtin.staticReport(), which are not needed post SIL.
+//
+// FIXME: This pass is mandatory so should probably be in
+// SILOptimizer/Mandatory.
 //
 //===----------------------------------------------------------------------===//
 
@@ -52,11 +55,6 @@ static void cleanFunction(SILFunction &Fn) {
   }
 }
 
-void swift::performSILCleanup(SILModule *M) {
-  for (auto &Fn : *M)
-    cleanFunction(Fn);
-}
-
 namespace {
 class SILCleanup : public swift::SILFunctionTransform {
 
@@ -66,7 +64,6 @@ class SILCleanup : public swift::SILFunctionTransform {
     invalidateAnalysis(SILAnalysis::InvalidationKind::FunctionBody);
   }
 
-  StringRef getName() override { return "SIL Cleanup"; }
 };
 } // end anonymous namespace
 

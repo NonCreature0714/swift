@@ -2,11 +2,11 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
-// See http://swift.org/LICENSE.txt for license information
-// See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
 //
@@ -46,10 +46,17 @@ namespace swift {
 
   bool canPossiblyConvertTo(Type T1, Type T2, DeclContext &DC);
 
-  Type lookUpTypeInContext(DeclContext *DC, StringRef Name);
-
   void collectDefaultImplementationForProtocolMembers(ProtocolDecl *PD,
                         llvm::SmallDenseMap<ValueDecl*, ValueDecl*> &DefaultMap);
+
+  /// \brief Collect all the protocol requirements that a given declaration can
+  ///   provide default implementations for. VD is a declaration in extension
+  ///   declaration. Scratch is the buffer to collect those protocol
+  ///   requirements.
+  ///
+  /// \returns the slice of Scratch
+  ArrayRef<ValueDecl*> canDeclProvideDefaultImplementationFor(ValueDecl* VD,
+                                  llvm::SmallVectorImpl<ValueDecl*> &Scractch);
 
   /// \brief Given an unresolved member E and its parent P, this function tries
   /// to infer the type of E.
@@ -57,18 +64,25 @@ namespace swift {
   bool typeCheckUnresolvedExpr(DeclContext &DC, Expr* E,
                                Expr *P, SmallVectorImpl<Type> &PossibleTypes);
 
-  /// \brief Given the base type and the trailing identifiers, this function tries
-  /// to infer the type of BaseType.Name1.Name2.Name3
-  /// \returns Resolved type on success, nullptr on error.
-  Type checkMemberType(DeclContext &DC, Type BaseTy, ArrayRef<Identifier> Names);
-
-  struct ResolveMemberResult {
-    ValueDecl *Favored = nullptr;
-    std::vector<ValueDecl*> OtherViables;
-    operator bool() const { return Favored; }
+  enum InterestedMemberKind : uint8_t {
+    Viable,
+    Unviable,
+    All,
   };
 
-  ResolveMemberResult resolveValueMember(DeclContext &DC, Type BaseTy,
+  struct ResolvedMemberResult {
+    struct Implementation;
+    Implementation &Impl;
+
+    ResolvedMemberResult();
+    ~ResolvedMemberResult();
+    operator bool() const;
+    bool hasBestOverload() const;
+    ValueDecl* getBestOverload() const;
+    ArrayRef<ValueDecl*> getMemberDecls(InterestedMemberKind Kind);
+  };
+
+  ResolvedMemberResult resolveValueMember(DeclContext &DC, Type BaseTy,
                                          DeclName Name);
 
   /// \brief Given a type and an extension to the original type decl of that type,

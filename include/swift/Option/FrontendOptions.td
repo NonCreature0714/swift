@@ -2,11 +2,11 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
-// See http://swift.org/LICENSE.txt for license information
-// See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
 //
@@ -63,6 +63,8 @@ def verify : Flag<["-"], "verify">,
            "annotations">;
 def verify_apply_fixes : Flag<["-"], "verify-apply-fixes">,
   HelpText<"Like -verify, but updates the original source file">;
+def verify_ignore_unknown: Flag<["-"], "verify-ignore-unknown">,
+  HelpText<"Allow diagnostics for '<unknown>' location in verify mode">;
 
 def show_diagnostics_after_fatal : Flag<["-"], "show-diagnostics-after-fatal">,
   HelpText<"Keep emitting subsequent diagnostics after a fatal error">;
@@ -116,6 +118,13 @@ def serialize_debugging_options : Flag<["-"], "serialize-debugging-options">,
 def autolink_library : Separate<["-"], "autolink-library">,
   HelpText<"Add dependent library">, Flags<[FrontendOption]>;
 
+def disable_typo_correction : Flag<["-"], "disable-typo-correction">,
+  HelpText<"Disable typo correction">;
+
+def disable_serialization_nested_type_lookup_table :
+  Flag<["-"], "disable-serialization-nested-type-lookup-table">,
+  HelpText<"Force module merging to use regular lookups to find nested types">;
+
 } // end let Flags = [FrontendOption, NoDriverOption]
 
 def debug_crash_Group : OptionGroup<"<automatic crashing options>">;
@@ -129,6 +138,9 @@ def debug_constraints : Flag<["-"], "debug-constraints">,
 
 def debug_constraints_attempt : Separate<["-"], "debug-constraints-attempt">,
   HelpText<"Debug the constraint solver at a given attempt">;
+
+def propagate_constraints : Flag<["-"], "propagate-constraints">,
+  HelpText<"Enable constraint propagation in the type checker">;
 
 def iterative_type_checker : Flag<["-"], "iterative-type-checker">,
   HelpText<"Enable the iterative type checker">;
@@ -144,6 +156,8 @@ def debug_time_compilation : Flag<["-"], "debug-time-compilation">,
   HelpText<"Prints the time taken by each compilation phase">;
 def debug_time_function_bodies : Flag<["-"], "debug-time-function-bodies">,
   HelpText<"Dumps the time it takes to type-check each function body">;
+def debug_time_expression_type_checking : Flag<["-"], "debug-time-expression-type-checking">,
+  HelpText<"Dumps the time it takes to type-check each expression">;
 
 def debug_assert_immediately : Flag<["-"], "debug-assert-immediately">,
   DebugCrashOpt, HelpText<"Force an assertion failure immediately">;
@@ -163,8 +177,11 @@ def disable_arc_opts : Flag<["-"], "disable-arc-opts">,
 def enable_guaranteed_closure_contexts : Flag<["-"], "enable-guaranteed-closure-contexts">,
   HelpText<"Use @guaranteed convention for closure context">;
 
+def disable_sil_partial_apply : Flag<["-"], "disable-sil-partial-apply">,
+  HelpText<"Disable use of partial_apply in SIL generation">;
+
 def remove_runtime_asserts : Flag<["-"], "remove-runtime-asserts">,
-HelpText<"Remove runtime asserts.">;
+  HelpText<"Remove runtime asserts.">;
 
 def disable_access_control : Flag<["-"], "disable-access-control">,
   HelpText<"Don't respect access control restrictions">;
@@ -221,24 +238,62 @@ def disable_sil_linking : Flag<["-"], "disable-sil-linking">,
 def dump_clang_diagnostics : Flag<["-"], "dump-clang-diagnostics">,
   HelpText<"Dump Clang diagnostics to stderr">;
 
+def disable_modules_validate_system_headers : Flag<["-"], "disable-modules-validate-system-headers">,
+  HelpText<"Disable validating system headers in the Clang importer">;
+
 def emit_verbose_sil : Flag<["-"], "emit-verbose-sil">,
   HelpText<"Emit locations during SIL emission">;
+
+def emit_pch : Flag<["-"], "emit-pch">,
+  HelpText<"Emit PCH for imported Objective-C header file">, ModeOpt;
+
+def enable_sil_ownership : Flag<["-"], "enable-sil-ownership">,
+  HelpText<"Enable the SIL Ownership Model">;
+
+def disable_mandatory_semantic_arc_opts : Flag<["-"], "disable-mandatory-semantic-arc-opts">,
+  HelpText<"Disable the mandatory semantic arc optimizer">;
+
+def assume_parsing_unqualified_ownership_sil : Flag<["-"], "assume-parsing-unqualified-ownership-sil">,
+  HelpText<"Assume unqualified SIL ownership when parsing SIL">;
+
+def enable_sil_opaque_values : Flag<["-"], "enable-sil-opaque-values">,
+  HelpText<"Enable SIL Opaque Values">;
 
 def enable_experimental_property_behaviors :
   Flag<["-"], "enable-experimental-property-behaviors">,
   HelpText<"Enable experimental property behaviors">;
 
-def enable_experimental_nested_generic_types :
-  Flag<["-"], "enable-experimental-nested-generic-types">,
-  HelpText<"Enable experimental support for nested generic types">;
+def enable_experimental_deserialization_recovery :
+  Flag<["-"], "enable-experimental-deserialization-recovery">,
+  HelpText<"Attempt to recover from missing xrefs (etc) in swiftmodules">;
+
+def enable_experimental_subclass_existentials : Flag<["-"],
+  "enable-experimental-subclass-existentials">,
+  HelpText<"Enable classes to appear in protocol composition types">;
+
+def enable_cow_existentials : Flag<["-"], "enable-cow-existentials">,
+  HelpText<"Enable the copy-on-write existential implementation">;
 
 def disable_availability_checking : Flag<["-"],
   "disable-availability-checking">,
   HelpText<"Disable checking for potentially unavailable APIs">;
 
+def disable_tsan_inout_instrumentation : Flag<["-"],
+  "disable-tsan-inout-instrumentation">,
+  HelpText<"Disable treatment of inout parameters as Thread Sanitizer accesses">;
+
 def enable_infer_import_as_member :
   Flag<["-"], "enable-infer-import-as-member">,
   HelpText<"Infer when a global could be imported as a member">;
+
+def enable_swift3_objc_inference : Flag<["-"], "enable-swift3-objc-inference">,
+  Flags<[FrontendOption, HelpHidden]>,
+HelpText<"Enable Swift 3's @objc inference rules for NSObject-derived classes and 'dynamic' members (emulates Swift 3 behavior)">;
+
+def disable_swift3_objc_inference :
+  Flag<["-"], "disable-swift3-objc-inference">,
+  Flags<[FrontendOption, HelpHidden]>,
+  HelpText<"Disable Swift 3's @objc inference rules for NSObject-derived classes and 'dynamic' members (emulates Swift 4 behavior)">;
 
 def warn_long_function_bodies : Separate<["-"], "warn-long-function-bodies">,
   MetaVarName<"<n>">,
@@ -267,12 +322,18 @@ def playground_high_performance : Flag<["-"], "playground-high-performance">,
 def disable_playground_transform : Flag<["-"], "disable-playground-transform">,
   HelpText<"Disable playground transformation">;
 
+def pc_macro : Flag<["-"], "pc-macro">,
+  HelpText<"Apply the 'program counter simulation' macro">;
+
 def use_jit : Flag<["-"], "use-jit">,
   HelpText<"Register Objective-C classes as if the JIT were in use">;
 
 def sil_inline_threshold : Separate<["-"], "sil-inline-threshold">,
   MetaVarName<"<50>">,
   HelpText<"Controls the aggressiveness of performance inlining">;
+
+def sil_merge_partial_modules : Flag<["-"], "sil-merge-partial-modules">,
+  HelpText<"Merge SIL from all partial swiftmodules into the final module">;
 
 def sil_link_all : Flag<["-"], "sil-link-all">,
   HelpText<"Link all SIL functions">;
@@ -331,7 +392,17 @@ def enable_resilience : Flag<["-"], "enable-resilience">,
    HelpText<"Compile the module to export resilient interfaces for all "
             "public declarations by default">;
 
+def enable_class_resilience : Flag<["-"], "enable-class-resilience">,
+   HelpText<"Compile the module to export resilient interfaces for all "
+            "public classes by default (doesn't work yet)">;
+
 def group_info_path : Separate<["-"], "group-info-path">,
   HelpText<"The path to collect the group information of the compiled module">;
+
+def diagnostics_editor_mode : Flag<["-"], "diagnostics-editor-mode">,
+HelpText<"Diagnostics will be used in editor">;
+
+def validate_tbd_against_ir: Flag<["-"], "validate-tbd-against-ir">,
+    HelpText<"Compare the symbols in the IR against the TBD file that would be generated.">;
 
 } // end let Flags = [FrontendOption, NoDriverOption, HelpHidden]

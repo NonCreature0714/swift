@@ -9,6 +9,7 @@
     - [Smoke Testing](#smoke-testing)
     - [Validation Testing](#validation-testing)
     - [Lint Testing](#lint-testing)
+    - [Specific Preset Testing](#specific-preset-testing)
 - [Cross Repository Testing](#cross-repository-testing)
 - [ci.swift.org bots](#ciswiftorg-bots)
 
@@ -28,6 +29,7 @@ swift-ci pull request testing is triggered by writing a comment on this PR addre
 2. Validation Testing
 3. Benchmarking.
 4. Lint Testing
+5. Specific Preset Testing
 
 We describe each in detail below:
 
@@ -35,10 +37,14 @@ We describe each in detail below:
 
         Platform     | Comment | Check Status
         ------------ | ------- | ------------
-        All supported platforms     | @swift-ci Please smoke test                | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)
-        All supported platforms     | @swift-ci Please smoke test and mere       | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)
-        OS X platform               | @swift-ci Please smoke test OS X platform  | Swift Test OS X Platform (smoke test)
-        Linux platform              | @swift-ci Please smoke test Linux platform | Swift Test Linux Platform (smoke test)
+        All supported platforms     | @swift-ci Please smoke test                      | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)
+        All supported platforms     | @swift-ci Please clean smoke test                | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)
+        All supported platforms     | @swift-ci Please smoke test and merge            | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)
+        All supported platforms     | @swift-ci Please clean smoke test and merge      | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)
+        OS X platform               | @swift-ci Please smoke test OS X platform        | Swift Test OS X Platform (smoke test)
+        OS X platform               | @swift-ci Please clean smoke test OS X platform  | Swift Test OS X Platform (smoke test)
+        Linux platform              | @swift-ci Please smoke test Linux platform       | Swift Test Linux Platform (smoke test)
+        Linux platform              | @swift-ci Please clean smoke test Linux platform | Swift Test Linux Platform (smoke test)
 
 A smoke test on macOS does the following:
 
@@ -66,14 +72,16 @@ A smoke test on Linux does the following:
 
         Platform     | Comment | Check Status
         ------------ | ------- | ------------
-        All supported platforms     | @swift-ci Please test                         | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)<br>Swift Test Linux Platform<br>Swift Test OS X Platform<br>  
-        All supported platforms     | @swift-ci Please clean test                   | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)<br>Swift Test Linux Platform<br>Swift Test OS X Platform<br>  
+        All supported platforms     | @swift-ci Please test                         | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)<br>Swift Test Linux Platform<br>Swift Test OS X Platform<br>
+        All supported platforms     | @swift-ci Please clean test                   | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)<br>Swift Test Linux Platform<br>Swift Test OS X Platform<br>
         All supported platforms     | @swift-ci Please test and merge               | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)<br> Swift Test Linux Platform <br>Swift Test OS X Platform
+        All supported platforms     | @swift-ci Please clean test and merge               | Swift Test Linux Platform (smoke test)<br>Swift Test OS X Platform (smoke test)<br> Swift Test Linux Platform <br>Swift Test OS X Platform
         OS X platform               | @swift-ci Please test OS X platform           | Swift Test OS X Platform (smoke test)<br>Swift Test OS X Platform
         OS X platform               | @swift-ci Please clean test OS X platform     | Swift Test OS X Platform (smoke test)<br>Swift Test OS X Platform
         OS X platform               | @swift-ci Please benchmark                    | Swift Benchmark on OS X Platform
         Linux platform              | @swift-ci Please test Linux platform          | Swift Test Linux Platform (smoke test)<br>Swift Test Linux Platform
         Linux platform              | @swift-ci Please clean test Linux platform    | Swift Test Linux Platform (smoke test)<br>Swift Test Linux Platform
+        OS X platform               | @swift-ci Please ASAN test                    | Swift ASAN Test OS X Platform
 
 The core principles of validation testing is that:
 
@@ -116,11 +124,25 @@ A validation test on Linux does the following:
         ------------ | ------- | ------------
         Python       | @swift-ci Please Python lint | Python lint
 
+### Specific Preset Testing
+
+        Platform     | Comment | Check Status
+        ------------ | ------- | ------------
+        OS X platform | preset=<preset> <br> @swift-ci Please test macOS with preset | Swift Test macOS Platform with preset
+
+For example:
+
+```
+preset=buildbot_incremental,tools=RA,stdlib=RD,smoketest=macosx,single-thread
+@swift-ci Please test macOS with preset
+
+```
+
 ## Cross Repository Testing
 
-Simply provide the URL from corresponding pull requests in the same comment as "@swift-ci Please test" phrase. List all of the pull requests and then provide the specific test phrase you would like to trigger. Currently, it will only merge the main pull request you requested testing from as opposed to all of the PR's. 
+Simply provide the URL from corresponding pull requests in the same comment as "@swift-ci Please test" phrase. List all of the pull requests and then provide the specific test phrase you would like to trigger. Currently, it will only merge the main pull request you requested testing from as opposed to all of the PR's.
 
-For example:   
+For example:
 
 ```
 Please test with following pull request:
@@ -135,6 +157,12 @@ https://github.com/apple/swift-lldb/pull/48
 https://github.com/apple/swift-package-manager/pull/632
 
 @swift-ci Please test macOS platform
+```
+
+```
+apple/swift-lldb#48
+
+@swift-ci Please test Linux platform
 ```
 
 1. Create a separate PR for each repository that needs to be changed. Each should reference the main Swift PR and create a reference to all of the others from the main PR.

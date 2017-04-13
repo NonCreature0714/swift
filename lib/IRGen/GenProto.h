@@ -2,11 +2,11 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2017 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
-// See http://swift.org/LICENSE.txt for license information
-// See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
 //
@@ -71,24 +71,6 @@ namespace irgen {
                                              llvm::Value *wtable,
                                            AssociatedTypeDecl *associatedType);
 
-  /// Given a type T and an associated type X of a protocol PT to which
-  /// T conforms, where X is required to implement some protocol PX, return
-  /// the witness table witnessing the conformance of T.X to PX.
-  ///
-  /// PX must be a direct requirement of X.
-  ///
-  /// \param parentMetadata - the type metadata for T
-  /// \param wtable - the witness table witnessing the conformance of T to PT
-  /// \param associatedType - the declaration of X; a member of PT
-  /// \param associatedTypeMetadata - the type metadata for T.X
-  /// \param associatedProtocol - the declaration of PX
-  llvm::Value *emitAssociatedTypeWitnessTableRef(IRGenFunction &IGF,
-                                                 llvm::Value *parentMetadata,
-                                                 llvm::Value *wtable,
-                                          AssociatedTypeDecl *associatedType,
-                                          llvm::Value *associatedTypeMetadata,
-                                          ProtocolDecl *associatedProtocol);
-
   /// Add the witness parameters necessary for calling a function with
   /// the given generics clause.
   void expandPolymorphicSignature(IRGenModule &IGM,
@@ -136,7 +118,7 @@ namespace irgen {
   void emitPolymorphicArguments(IRGenFunction &IGF,
                                 CanSILFunctionType origType,
                                 CanSILFunctionType substType,
-                                ArrayRef<Substitution> subs,
+                                const SubstitutionMap &subs,
                                 WitnessMetadata *witnessMetadata,
                                 Explosion &args);
 

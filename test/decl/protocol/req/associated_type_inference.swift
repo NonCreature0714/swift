@@ -1,4 +1,4 @@
-// RUN: %target-parse-verify-swift
+// RUN: %target-typecheck-verify-swift
 
 protocol P0 {
   associatedtype Assoc1 : PSimple // expected-note{{ambiguous inference of associated type 'Assoc1': 'Double' vs. 'Int'}}
@@ -80,8 +80,8 @@ protocol P1 {
 }
 
 extension P1 {
-  final func f0(_ x: Int) { }
-  final func g0(_ x: Int) { }
+  func f0(_ x: Int) { }
+  func g0(_ x: Int) { }
 }
 
 struct X0j : P0, P1 { }
@@ -93,8 +93,8 @@ protocol P2 {
 }
 
 extension P2 where Self.P2Assoc : PSimple {
-  final func f0(_ x: P2Assoc) { } // expected-note{{inferred type 'Float' (by matching requirement 'f0') is invalid: does not conform to 'PSimple'}}
-  final func g0(_ x: P2Assoc) { } // expected-note{{inferred type 'Float' (by matching requirement 'g0') is invalid: does not conform to 'PSimple'}}
+  func f0(_ x: P2Assoc) { } // expected-note{{inferred type 'Float' (by matching requirement 'f0') is invalid: does not conform to 'PSimple'}}
+  func g0(_ x: P2Assoc) { } // expected-note{{inferred type 'Float' (by matching requirement 'g0') is invalid: does not conform to 'PSimple'}}
 }
 
 struct X0k : P0, P2 {
@@ -325,4 +325,33 @@ extension P12 {
 
 struct X12 : P12 {
   typealias A = String
+}
+
+// Infinite recursion -- we would try to use the extension
+// initializer's argument type of 'Dough' as a candidate for
+// the associated type
+protocol Cookie {
+  associatedtype Dough
+  // expected-note@-1 {{protocol requires nested type 'Dough'; do you want to add it?}}
+
+  init(t: Dough)
+}
+
+extension Cookie {
+  init(t: Dough?) {}
+}
+
+struct Thumbprint : Cookie {}
+// expected-error@-1 {{type 'Thumbprint' does not conform to protocol 'Cookie'}}
+
+// Looking through typealiases
+protocol Vector {
+  associatedtype Element
+  typealias Elements = [Element]
+
+  func process(elements: Elements)
+}
+
+struct Int8Vector : Vector {
+  func process(elements: [Int8]) { }
 }
